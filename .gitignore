@@ -1,0 +1,23 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+*.tfvars
+!example.tfvars
+
+# Ansible
+*.retry
+inventory.ini
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Helm : sauvegardes de l'étape 15
+*.bak
+
+# Divers
+backup/
+*.log
+.DS_Store

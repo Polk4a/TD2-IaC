@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-html
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="fr">
+    <head>
+      <meta charset="utf-8">
+      <title>NovaShop - TD2</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; margin: 0; padding: 2em; background: #f0f4f8; color: #1f2937; }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2em; }
+        h1 { color: #1950a0; margin: 0; font-size: 2em; }
+        .tagline { color: #6b7280; font-size: 0.9em; margin-top: 0.2em; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1em; margin-bottom: 2em; }
+        .card { background: #fff; padding: 1em 1.2em; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #1950a0; }
+        .card.backend { border-left-color: #e6781e; }
+        .card.db { border-left-color: #1e8c46; }
+        .card.visits { border-left-color: #6e3c96; }
+        .card-label { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 0.3em; }
+        .card-value { font-family: monospace; font-size: 0.95em; color: #111827; word-break: break-all; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        thead { background: #1950a0; color: #fff; }
+        th { text-align: left; padding: 0.8em 1em; font-weight: 600; }
+        td { padding: 0.7em 1em; border-bottom: 1px solid #e5e7eb; }
+        tbody tr:last-child td { border-bottom: none; }
+        .status { display: inline-block; padding: 0.2em 0.6em; border-radius: 999px; background: #d1fae5; color: #065f46; font-size: 0.8em; font-weight: 600; }
+        .refresh-note { text-align: center; color: #9ca3af; font-size: 0.85em; margin-top: 2em; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <header>
+          <div>
+            <h1>NovaShop</h1>
+            <div class="tagline">Application 3-tiers - TD2 IaC / DevSecOps</div>
+          </div>
+          <span class="status" id="status">En ligne</span>
+        </header>
+
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">Pod frontend</div>
+            <div class="card-value" id="frontend-pod">-</div>
+          </div>
+          <div class="card backend">
+            <div class="card-label">Pod backend</div>
+            <div class="card-value" id="backend-pod">-</div>
+          </div>
+          <div class="card db">
+            <div class="card-label">Base de donnees</div>
+            <div class="card-value">PostgreSQL 16</div>
+          </div>
+          <div class="card visits">
+            <div class="card-label">Visites totales</div>
+            <div class="card-value" id="visits">-</div>
+          </div>
+        </div>
+
+        <table>
+          <thead><tr><th>ID</th><th>Nom de l'article</th></tr></thead>
+          <tbody id="items-body"></tbody>
+        </table>
+
+        <div class="refresh-note">Rafraichissement automatique toutes les 5 secondes</div>
+      </div>
+
+      <script>
+        function setStatus(ok) {
+          var s = document.getElementById("status");
+          s.textContent = ok ? "En ligne" : "Hors ligne";
+          s.style.background = ok ? "#d1fae5" : "#fee2e2";
+          s.style.color = ok ? "#065f46" : "#991b1b";
+        }
+
+        async function refresh() {
+          try {
+            var head = await fetch("/?cachebust=" + Date.now(), { method: "HEAD" });
+            document.getElementById("frontend-pod").textContent = head.headers.get("X-Pod-Name") || "?";
+
+            var resp = await fetch("/api/items?cachebust=" + Date.now());
+            var data = await resp.json();
+            document.getElementById("backend-pod").textContent = data.pod || "?";
+
+            var tbody = document.getElementById("items-body");
+            tbody.innerHTML = "";
+            (data.items || []).forEach(function (it) {
+              var tr = document.createElement("tr");
+              var td1 = document.createElement("td");
+              var td2 = document.createElement("td");
+              td1.textContent = it.id;
+              td2.textContent = it.name;
+              tr.appendChild(td1);
+              tr.appendChild(td2);
+              tbody.appendChild(tr);
+            });
+            var vresp = await fetch("/api/visits?cachebust=" + Date.now());
+            var vdata = await vresp.json();
+            document.getElementById("visits").textContent = vdata.total_visits;
+            setStatus(true);
+          } catch (e) {
+            setStatus(false);
+          }
+        }
+
+        refresh();
+        setInterval(refresh, 5000);
+      </script>
+    </body>
+    </html>
